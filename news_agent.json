@@ -1,0 +1,216 @@
+{
+  "name": "AI News Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "=You are a helpful and friendly news assistant for {{ $json.message.from.first_name }}.\n\nYour goal is to help the user find news articles.\n- If the user greets you or makes small talk, respond politely.\n- If the user asks for news, use the \"HTTP Request\" tool to find it.\n- Always structure your news summaries with bold titles and clear links.\n- Do NOT try to escape characters for Telegram. just write normal text and standard Markdown.",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        312,
+        0
+      ],
+      "id": "7170db59-9867-4e92-a4d4-220eb1659ee2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "chatId": "7239980417",
+        "text": "={{ $json.output.replace(/\\./g, '\\\\.').replace(/-/g, '\\\\-').replace(/!/g, '\\\\!') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "MarkdownV2"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "bfb9af74-1024-4180-b012-ca76722c353b",
+      "name": "Send a text message",
+      "webhookId": "90d163e5-4fbf-4992-97f0-200568ef30fb",
+      "credentials": {
+        "telegramApi": {
+          "id": "UOV5avbRHMHzybpa",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        256,
+        224
+      ],
+      "id": "8ffe0791-5faa-422f-8390-95e11744f77a",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "d1gZx2m469L33Htb",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        32,
+        0
+      ],
+      "id": "ee62acd1-f93e-46df-9e24-82d33aa3e3f2",
+      "name": "Telegram Trigger",
+      "webhookId": "69792993-8a07-4f9e-83a4-a08c546bc764",
+      "credentials": {
+        "telegramApi": {
+          "id": "UOV5avbRHMHzybpa",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.chat.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        224
+      ],
+      "id": "53e60f59-6af3-444e-a6be-431ac6583dfe",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Use this tool to fetch the latest news headlines when the user asks about current events.",
+        "url": "=https://newsapi.org/v2/top-headlines?country=us",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "category",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', `The news category. You MUST choose exactly one from this list: [business, entertainment, general, health, science, sports, technology]. If the topic does not fit, use \"general\".`, 'string') }}"
+            },
+            {
+              "name": "q",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters1_Value', `Extract 1-3 keywords from the user's request (e.g. \"Bitcoin ETF\" or \"Manchester United\").`, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        512,
+        224
+      ],
+      "id": "2bc52b21-5e44-4319-b3a0-02d7f7d51edb",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "sZcrrT2duB08n7xG",
+          "name": "Query Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0730108f-9401-42fe-9a49-560c94cc81e4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "83dc1274eeceea558ede5703aa12f945a7611885258553be99c7dff9cde8eb47"
+  },
+  "id": "fB2jpRFUlxzQhv2q",
+  "tags": []
+}
